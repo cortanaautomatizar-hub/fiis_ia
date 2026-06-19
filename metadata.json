@@ -1,0 +1,8 @@
+{
+  "name": "Remix: FIIs IA",
+  "description": "Plataforma inteligente de análise e precificação de Fundos Imobiliários (FIIs) com IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

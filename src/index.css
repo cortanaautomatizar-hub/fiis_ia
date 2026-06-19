@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Sora", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-serif: "Sora", ui-sans-serif, system-ui, sans-serif;
+  
+  /* Increased standard sizes for comfortable reading */
+  --text-xs: 0.8125rem;       /* ~13px (was 12px) */
+  --text-sm: 0.9375rem;       /* ~15px (was 14px) */
+  --text-base: 1.0625rem;     /* ~17px (was 16px) */
+  --text-lg: 1.1875rem;       /* ~19px (was 18px) */
+  --text-xl: 1.3125rem;       /* ~21px (was 20px) */
+  --text-2xl: 1.625rem;       /* ~26px (was 24px) */
+}
+
+/* Highly calibrated scaling for small arbitrary pixel utility classes to prevent visual bugs while improving legibility */
+.text-\[10px\] {
+  font-size: 11.5px !important;
+}
+.text-\[11px\] {
+  font-size: 12.5px !important;
+}
+
+body {
+  background-color: #020617;
+  color: #f1f5f9;
+}
+
+/* Custom scrollbar to look sleek & premium */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 115s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
