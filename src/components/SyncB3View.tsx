@@ -381,22 +381,26 @@ export default function SyncB3View({
     localStorage.setItem('fii_b3_visible_cols_v1', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
-  // Compute final positions dynamically by merging BASELINE_B3_POSITIONS with transactions and custom average price overrides
+  // Compute final positions dynamically by merging real portfolio with transactions and custom overrides
   const activePositions = useMemo(() => {
-    // Clone baseline
-    const positionsMap = new Map<string, typeof BASELINE_B3_POSITIONS[0]>();
-    
-    BASELINE_B3_POSITIONS.forEach(p => {
-      // Prioritize the price from the 'fiis' registry if available, else use baseline
-      const matchInRegistry = fiis.find(f => f.symbol === p.symbol);
-      const currentPrice = matchInRegistry ? matchInRegistry.currentPrice : p.currentPrice;
-      const averagePrice = customAveragePrices[p.symbol] !== undefined ? customAveragePrices[p.symbol] : p.averagePrice;
-      
-      positionsMap.set(p.symbol, {
-        ...p,
+    const positionsMap = new Map<string, any>();
+
+    // Use the real imported portfolio as the source of truth
+    portfolio.forEach(item => {
+      const matchInRegistry = fiis.find(f => f.symbol === item.symbol);
+      const currentPrice = matchInRegistry ? matchInRegistry.currentPrice : item.averagePrice;
+      const segment = matchInRegistry ? matchInRegistry.segment : ('Híbrido' as FiiSegment);
+      const averagePrice = customAveragePrices[item.symbol] !== undefined ? customAveragePrices[item.symbol] : item.averagePrice;
+      const premium = matchInRegistry ? (matchInRegistry.dy || 10.0) : 10.0;
+
+      positionsMap.set(item.symbol, {
+        symbol: item.symbol,
+        quantity: item.quantity,
         averagePrice,
         currentPrice,
-        note: customNotes[p.symbol] !== undefined ? customNotes[p.symbol] : p.note
+        segment,
+        note: customNotes[item.symbol] !== undefined ? customNotes[item.symbol] : 0,
+        premium
       });
     });
 
@@ -471,7 +475,7 @@ export default function SyncB3View({
         contribution
       };
     });
-  }, [transactions, customNotes, fiis, customAveragePrices, customQuantities]);
+  }, [portfolio, transactions, customNotes, fiis, customAveragePrices, customQuantities]);
 
   // Compute portfolio-level summarized metrics
   const portfolioMetrics = useMemo(() => {
