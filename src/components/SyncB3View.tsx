@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.5
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   RefreshCw, 
   ShieldCheck, 
@@ -137,6 +137,10 @@ export default function SyncB3View({
   // Manual Paste State (CEI tab)
   const [pasteContent, setPasteContent] = useState('');
   const [pasteError, setPasteError] = useState('');
+
+  // Real file upload state (B3 hub tab)
+  const b3FileInputRef = useRef<HTMLInputElement>(null);
+  const [b3UploadFeedback, setB3UploadFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   // Sincronizar automáticando compras active state
   const [autoSyncB3OnBuy, setAutoSyncB3OnBuy] = useState(true);
@@ -747,47 +751,69 @@ export default function SyncB3View({
   };
 
   // Authentication direct CEI sync simulation (Tab 2)
-  const handleSimulateB3Sync = () => {
-    if (!cpf || (cpf.length < 11 && !isCpfCustomized)) {
-      setAuthError('Por favor, informe seu CPF para fins de validação no extrato de custódia.');
-      return;
-    }
-    
-    setAuthError('');
+  const processB3File = (file: File) => {
     setIsAuthLoading(true);
-    setAuthStep(0);
-    setImportCompleted(false);
+    setAuthError('');
+    setB3UploadFeedback(null);
     setImportedHoldings([]);
+    setImportCompleted(false);
 
-    const runSteps = (step: number) => {
-      if (step < STEPS_LIST.length) {
-        setAuthStep(step);
-        setTimeout(() => runSteps(step + 1), 750);
-      } else {
-        // Load default positions representing premium investment records of Alanderson
-        const simulated: any[] = BASELINE_B3_POSITIONS.map(item => {
-          const matchedRegistry = fiis.find(f => f.symbol === item.symbol);
-          const currentPrice = matchedRegistry ? matchedRegistry.currentPrice : item.currentPrice;
-          return {
-            symbol: item.symbol,
-            quantity: item.quantity,
-            averagePrice: item.averagePrice,
-            currentPrice: parseFloat(currentPrice.toFixed(2)),
-            segment: item.segment
-          };
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      try {
+        const fullDataUrl = event.target?.result as string;
+        if (!fullDataUrl) throw new Error('Não foi possível ler o conteúdo do arquivo.');
+
+        const base64Content = fullDataUrl.split(',')[1];
+        let mimeType = file.type;
+        if (!mimeType) {
+          const ext = file.name.split('.').pop()?.toLowerCase();
+          if (ext === 'pdf') mimeType = 'application/pdf';
+          else if (ext === 'xlsx') mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          else if (ext === 'xls') mimeType = 'application/vnd.ms-excel';
+          else if (ext === 'csv') mimeType = 'text/csv';
+          else mimeType = 'text/plain';
+        }
+
+        const response = await fetch('/api/analyze-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileData: base64Content, mimeType, fileName: file.name })
         });
 
-        setImportedHoldings(simulated);
-        const sel: Record<string, boolean> = {};
-        simulated.forEach(item => {
-          sel[item.symbol] = true;
-        });
-        setSelectedHoldings(sel);
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.assets) && result.assets.length > 0) {
+          const holdings = result.assets.map((asset: any) => {
+            const symbol = asset.symbol?.toUpperCase()?.trim();
+            const matchedFii = fiis.find(f => f.symbol === symbol);
+            const currentPrice = matchedFii ? matchedFii.currentPrice : (parseFloat(asset.averagePrice) || 100);
+            return {
+              symbol,
+              quantity: Math.max(1, parseInt(asset.quantity) || 10),
+              averagePrice: parseFloat(parseFloat(asset.averagePrice).toFixed(2)) || 100.00,
+              currentPrice: parseFloat(currentPrice.toFixed(2)),
+              segment: matchedFii ? matchedFii.segment : 'Híbrido'
+            };
+          });
+          setImportedHoldings(holdings);
+          const sel: Record<string, boolean> = {};
+          holdings.forEach((h: any) => { sel[h.symbol] = true; });
+          setSelectedHoldings(sel);
+          setB3UploadFeedback({ success: true, message: `Extrato "${file.name}" processado! ${holdings.length} FIIs identificados.` });
+        } else {
+          throw new Error(result.error || 'Nenhum ativo FII encontrado no arquivo.');
+        }
+      } catch (error: any) {
+        setAuthError(`Erro ao processar "${file.name}": ${error.message || 'Tente novamente.'}`);
+        setB3UploadFeedback({ success: false, message: error.message || 'Falha na análise. Verifique o formato do arquivo.' });
+      } finally {
         setIsAuthLoading(false);
       }
     };
 
-    runSteps(0);
+    reader.readAsDataURL(file);
   };
 
   // Convert parsed text lines to imported holdings
@@ -2066,8 +2092,8 @@ export default function SyncB3View({
               >
                 <UserCheck size={16} className={activeSubTab === 'b3_hub' ? 'text-sky-450' : 'text-slate-500'} />
                 <div className="flex flex-col">
-                  <span>Conexão Integrada B3</span>
-                  <span className="text-[9px] text-slate-500 font-normal mt-0.5">Sincroniza via login seguro no portal B3</span>
+                  <span>Importar Extrato B3</span>
+                  <span className="text-[9px] text-slate-500 font-normal mt-0.5">Upload de extrato PDF, Excel ou CSV</span>
                 </div>
               </button>
 
@@ -2094,69 +2120,70 @@ export default function SyncB3View({
               {activeSubTab === 'b3_hub' ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider font-sans">Identificação B3</h3>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider font-sans">Importar Extrato da B3</h3>
                     <p className="text-[11px] text-slate-400 leading-normal">
-                      Seu CPF é verificado junto ao repositório de Clearing da B3 para puxar as cotas atuais de sua carteira registrada.
+                      Faça o upload do seu extrato de custódia. O motor de IA extrai automaticamente seus FIIs, quantidades e preços médios.
                     </p>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="space-y-1 text-left">
-                      <label className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">CPF do Titular</label>
-                      <input
-                        type="text"
-                        value={cpf}
-                        onChange={(e) => handleCpfChange(e.target.value)}
-                        onClick={() => {
-                          if (!isCpfCustomized) {
-                            setCpf('');
-                            setIsCpfCustomized(true);
-                          }
-                        }}
-                        className="w-full bg-[#030712] border border-[#1e293b] rounded-xl text-xs py-2 px-3 text-white outline-none focus:border-sky-400 font-mono transition-colors"
-                        placeholder="000.000.000-00"
-                      />
-                    </div>
-
-                    <div className="space-y-1 text-left">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Senha Área do Investidor</label>
-                        <span className="text-[9px] text-sky-400 cursor-pointer hover:underline font-semibold font-sans">Esqueceu?</span>
-                      </div>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-[#030712] border border-[#1e293b] rounded-xl text-xs py-2 px-3 text-white outline-none focus:border-sky-400 font-mono transition-colors"
-                        placeholder="Sua senha"
-                      />
-                    </div>
+                  <div className="p-3 bg-sky-500/5 border border-sky-500/15 rounded-xl space-y-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-sky-400 font-mono">Como obter seu extrato</span>
+                    <ol className="list-decimal list-inside space-y-1 text-[10px] text-slate-400 font-sans leading-normal">
+                      <li>Acesse <strong className="text-slate-300">investidor.b3.com.br</strong> → Posição Consolidada</li>
+                      <li>Exporte como CSV ou PDF</li>
+                      <li>Ou exporte o extrato da sua corretora (XP, Rico, Clear, etc.)</li>
+                    </ol>
                   </div>
 
+                  <input
+                    ref={b3FileInputRef}
+                    type="file"
+                    accept=".pdf,.xlsx,.xls,.csv,.txt"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) processB3File(file);
+                      e.target.value = '';
+                    }}
+                  />
+
+                  <div
+                    onClick={() => !isAuthLoading && b3FileInputRef.current?.click()}
+                    className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl transition-colors ${
+                      isAuthLoading
+                        ? 'border-[#1e293b] opacity-50 cursor-not-allowed'
+                        : 'border-[#1e293b] hover:border-sky-500/40 cursor-pointer hover:bg-sky-500/5'
+                    } bg-[#030712] group`}
+                  >
+                    <FileSpreadsheet size={24} className="text-slate-600 group-hover:text-sky-400 transition-colors" />
+                    <span className="text-xs font-bold text-slate-400 group-hover:text-white transition-colors font-sans">Clique para selecionar arquivo</span>
+                    <span className="text-[10px] text-slate-600 font-sans">PDF, Excel, CSV — extrato B3 ou corretora</span>
+                  </div>
+
+                  {b3UploadFeedback && (
+                    <div className={`text-[11px] border rounded-lg p-2.5 flex items-start gap-1.5 font-sans ${
+                      b3UploadFeedback.success
+                        ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                        : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                    }`}>
+                      {b3UploadFeedback.success
+                        ? <Check size={13} className="shrink-0 mt-0.5" />
+                        : <AlertCircle size={13} className="shrink-0 mt-0.5" />}
+                      <span>{b3UploadFeedback.message}</span>
+                    </div>
+                  )}
+
                   {authError && (
-                    <div className="text-[11px] text-rose-455 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 flex items-start gap-1.5 font-sans">
+                    <div className="text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 flex items-start gap-1.5 font-sans">
                       <AlertCircle size={13} className="text-rose-400 shrink-0 mt-0.5" />
                       <span>{authError}</span>
                     </div>
                   )}
 
-                  <button
-                    onClick={handleSimulateB3Sync}
-                    disabled={isAuthLoading}
-                    className="w-full bg-sky-500 hover:bg-sky-600 text-white font-sans text-xs font-bold py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
-                  >
-                    {isAuthLoading ? (
-                      <RefreshCw size={13} className="animate-spin" />
-                    ) : (
-                      <UserCheck size={13} />
-                    )}
-                    <span>{isAuthLoading ? 'Autenticando na B3...' : 'Importar Custódia Automática'}</span>
-                  </button>
-
                   <div className="p-3 bg-[#0c1a2e]/40 border border-sky-500/10 rounded-xl flex items-start gap-2.5">
                     <Info size={14} className="text-sky-400 shrink-0 mt-0.5" />
                     <p className="text-[10px] text-slate-400 leading-normal font-sans">
-                      Nossa suíte é integrada com as APIs públicas corporativas e usa um canal seguro. Seus dados cadastrais não são compartilhados externamente.
+                      Seu arquivo é processado pelo motor de IA e nunca é armazenado em nossos servidores.
                     </p>
                   </div>
                 </div>
@@ -2219,13 +2246,10 @@ export default function SyncB3View({
                 </div>
                 
                 <div className="space-y-2 max-w-sm">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#0284c7] font-mono">Conexão B3 Ativa</span>
-                  <p className="text-sm font-bold text-white font-sans">{STEPS_LIST[authStep]}</p>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#0284c7] font-mono">Analisando Extrato</span>
+                  <p className="text-sm font-bold text-white font-sans">Motor de IA processando seu arquivo...</p>
                   <div className="w-48 h-1 bg-[#1e293b] rounded-full mx-auto overflow-hidden">
-                    <div 
-                      className="h-full bg-sky-400 transition-all duration-300"
-                      style={{ width: `${((authStep + 1) / STEPS_LIST.length) * 100}%` }}
-                    ></div>
+                    <div className="h-full bg-sky-400 animate-pulse" style={{ width: '60%' }}></div>
                   </div>
                 </div>
               </div>
