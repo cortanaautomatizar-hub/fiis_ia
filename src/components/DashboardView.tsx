@@ -298,7 +298,7 @@ export default function DashboardView({
                   id={`analysis-item-${analysis.id}`}
                   onClick={() => {
                     const dest = analysis.type.toLowerCase();
-                    onNavigate(dest === 'enquadramento' ? 'analisador' : dest);
+                    onNavigate(dest);
                   }}
                   className="p-4 bg-[#020617]/70 border border-[#1e293b] hover:border-[#334155] rounded-xl hover:bg-[#1e293b]/40 transition-all duration-300 cursor-pointer group"
                 >

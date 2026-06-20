@@ -23,6 +23,7 @@ import AnalyzerView from './components/AnalyzerView';
 import TutorView from './components/TutorView';
 import PricingView from './components/PricingView';
 import DirecionadorView from './components/DirecionadorView';
+import EnquadramentoView from './components/EnquadramentoView';
 import GalleryView from './components/GalleryView';
 import SyncB3View from './components/SyncB3View';
 import AgentesIAView from './components/AgentesIAView';
@@ -205,14 +206,10 @@ export default function App() {
 
   // Switch navigation helper
   const handleNavigate = (view: string, extraParam?: string) => {
-    if (view === 'enquadramento') {
-      setActiveView('analisador');
-    } else {
-      if ((view === 'tutor' || view === 'agentes_ia') && extraParam) {
-        setTutorSymbol(extraParam);
-      }
-      setActiveView(view);
+    if ((view === 'tutor' || view === 'agentes_ia') && extraParam) {
+      setTutorSymbol(extraParam);
     }
+    setActiveView(view);
   };
 
   return (
@@ -355,6 +352,14 @@ export default function App() {
             <DirecionadorView 
               portfolio={portfolio} 
               onNavigate={handleNavigate} 
+              fiis={fiis}
+            />
+          )}
+
+          {activeView === 'enquadramento' && (
+            <EnquadramentoView
+              portfolio={portfolio}
+              onNavigate={handleNavigate}
               fiis={fiis}
             />
           )}

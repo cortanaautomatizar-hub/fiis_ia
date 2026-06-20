@@ -66,6 +66,12 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
       icon: Compass,
     },
     {
+      id: 'enquadramento',
+      label: 'Enquadramento',
+      subtitle: 'Plano de rebalanceamento',
+      icon: Scale,
+    },
+    {
       id: 'galeria',
       label: 'Galeria IA',
       subtitle: 'Modelos e backups',
