@@ -11,9 +11,7 @@ import {
   Scale, 
   DollarSign, 
   Grid,
-  FolderHeart,
   RefreshCw,
-  Cpu
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,12 +40,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
       icon: BarChart3,
     },
     {
-      id: 'agentes_ia',
-      label: 'Agentes de IA',
-      subtitle: 'Workspace Anthropic MCP',
-      icon: Cpu,
-    },
-    {
       id: 'tutor',
       label: 'Tutor de FIIs',
       subtitle: 'Tire suas dúvidas',
@@ -70,12 +62,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
       label: 'Enquadramento',
       subtitle: 'Plano de rebalanceamento',
       icon: Scale,
-    },
-    {
-      id: 'galeria',
-      label: 'Galeria IA',
-      subtitle: 'Modelos e backups',
-      icon: FolderHeart,
     },
   ];
 

@@ -24,9 +24,7 @@ import TutorView from './components/TutorView';
 import PricingView from './components/PricingView';
 import DirecionadorView from './components/DirecionadorView';
 import EnquadramentoView from './components/EnquadramentoView';
-import GalleryView from './components/GalleryView';
 import SyncB3View from './components/SyncB3View';
-import AgentesIAView from './components/AgentesIAView';
 
 import { INITIAL_PORTFOLIO, INITIAL_REF_PORTFOLIOS, AVAILABLE_FIIS } from './data';
 import { PortfolioItem, GalleryPortfolio, FiiMetric } from './types';
@@ -206,7 +204,7 @@ export default function App() {
 
   // Switch navigation helper
   const handleNavigate = (view: string, extraParam?: string) => {
-    if ((view === 'tutor' || view === 'agentes_ia') && extraParam) {
+    if (view === 'tutor' && extraParam) {
       setTutorSymbol(extraParam);
     }
     setActiveView(view);
@@ -309,18 +307,6 @@ export default function App() {
             />
           )}
 
-          {activeView === 'galeria' && (
-            <GalleryView 
-              portfolio={portfolio}
-              savedPortfolios={savedPortfolios}
-              onSavePortfolio={handleSavePortfolio}
-              onLoadPortfolio={handleLoadPortfolio}
-              onDeletePortfolio={handleDeletePortfolio}
-              activePortfolioName={activePortfolioName}
-              fiis={fiis}
-            />
-          )}
-
           {activeView === 'analisador' && (
             <AnalyzerView 
               portfolio={portfolio} 
@@ -329,13 +315,6 @@ export default function App() {
               fiis={fiis}
               onUpdateFiis={handleUpdateFiis}
               activePortfolioName={activePortfolioName}
-            />
-          )}
-
-          {activeView === 'agentes_ia' && (
-            <AgentesIAView 
-              fiis={fiis} 
-              initialSymbol={tutorSymbol}
             />
           )}
 
