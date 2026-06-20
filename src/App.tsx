@@ -24,7 +24,6 @@ import TutorView from './components/TutorView';
 import PricingView from './components/PricingView';
 import DirecionadorView from './components/DirecionadorView';
 import EnquadramentoView from './components/EnquadramentoView';
-import SyncB3View from './components/SyncB3View';
 
 import { INITIAL_PORTFOLIO, INITIAL_REF_PORTFOLIOS, AVAILABLE_FIIS } from './data';
 import { PortfolioItem, GalleryPortfolio, FiiMetric } from './types';
@@ -77,7 +76,7 @@ const INITIAL_SAVED_PORTFOLIOS: GalleryPortfolio[] = [
 ];
 
 export default function App() {
-  const [activeView, setActiveView] = useState<string>('sync_b3');
+  const [activeView, setActiveView] = useState<string>('dashboard');
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>(INITIAL_PORTFOLIO);
   const [activePortfolioName, setActivePortfolioName] = useState<string>('28-05 (28-05, 20:26)');
   const [tutorSymbol, setTutorSymbol] = useState<string>('');
@@ -340,16 +339,6 @@ export default function App() {
               portfolio={portfolio}
               onNavigate={handleNavigate}
               fiis={fiis}
-            />
-          )}
-
-          {activeView === 'sync_b3' && (
-            <SyncB3View 
-              portfolio={portfolio} 
-              fiis={fiis}
-              onUpdatePortfolio={setPortfolio} 
-              onUpdateFiis={handleUpdateFiis}
-              onNavigate={handleNavigate}
             />
           )}
 

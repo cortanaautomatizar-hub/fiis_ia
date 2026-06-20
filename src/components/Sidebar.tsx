@@ -22,12 +22,6 @@ interface SidebarProps {
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const menuItems = [
     {
-      id: 'sync_b3',
-      label: 'Sincronizar B3',
-      subtitle: 'Importação de Custódia',
-      icon: RefreshCw,
-    },
-    {
       id: 'dashboard',
       label: 'Dashboard',
       subtitle: 'Central de análises',
