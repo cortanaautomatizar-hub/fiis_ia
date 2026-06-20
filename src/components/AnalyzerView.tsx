@@ -27,6 +27,7 @@ import {
   Layout
 } from 'lucide-react';
 import { AVAILABLE_FIIS, segmentColors } from '../data';
+import { fetchTickerPrice } from '../services/b3Service';
 import { FiiMetric, PortfolioItem, FiiSegment } from '../types';
 
 interface AnalyzerViewProps {
@@ -696,7 +697,6 @@ export default function AnalyzerView({ portfolio, onUpdatePortfolio, onNavigate,
     setB3Result(null);
     
     try {
-      const { fetchTickerPrice } = await import('../services/b3Service');
       const res = await fetchTickerPrice(cleaned);
       if (res.success && res.price > 0) {
         setB3Result({
