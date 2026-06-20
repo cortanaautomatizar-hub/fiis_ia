@@ -35,6 +35,7 @@ export default function PricingView({ fiis }: PricingViewProps = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState(activeFiis[0].symbol);
+  const [rankingSearch, setRankingSearch] = useState('');
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Parameters
@@ -433,58 +434,99 @@ export default function PricingView({ fiis }: PricingViewProps = {}) {
             </div>
           </div>
 
-          {/* All FIIs quick ranking */}
-          <div className="bg-[#020617]/70 border border-[#1e293b] rounded-xl overflow-hidden shadow-lg">
-            <div className="px-4 py-3 border-b border-[#1e293b] flex items-center justify-between">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-sans flex items-center gap-1.5">
-                <Tag size={12} className="text-sky-400" /> Ranking Desconto vs Preço Teto
-              </h3>
-            </div>
-            <div className="divide-y divide-[#1e293b]">
-              {activeFiis
-                .map(f => {
-                  const isP = f.segment === 'Recebíveis';
-                  const vpaF = f.currentPrice / f.p_vp;
-                  const kF = ntnbRate + (isP ? 2.0 : 3.5);
-                  const gF = 3.5;
-                  const tetoF = isP
-                    ? vpaF
-                    : (() => {
-                        const rd = (kF - gF) / 100;
-                        return rd <= 0 ? 0 : (f.lastDividend * 12) / rd;
-                      })();
-                  const discF = tetoF > 0 ? ((tetoF - f.currentPrice) / tetoF) * 100 : 0;
-                  return { ...f, tetoF, discF };
-                })
-                .sort((a, b) => b.discF - a.discF)
-                .map((f, i) => {
-                  const fc = segmentColors[f.segment] || { text: 'text-slate-400' };
-                  const isSelected = f.symbol === selectedSymbol;
-                  return (
-                    <button
-                      key={f.symbol}
-                      onClick={() => handleSelect(f.symbol)}
-                      className={`w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-[#1e293b]/40 transition-colors ${isSelected ? 'bg-sky-500/5 border-l-2 border-sky-400' : ''}`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-[10px] text-slate-600 font-mono w-4">{i + 1}</span>
-                        <span className={`text-[11px] font-bold font-mono ${fc.text}`}>{f.symbol}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-mono text-slate-400">teto R$ {f.tetoF.toFixed(2)}</span>
-                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                          f.discF >= 0
-                            ? 'text-emerald-400 bg-emerald-500/10'
-                            : 'text-red-400 bg-red-500/10'
-                        }`}>
-                          {f.discF >= 0 ? '+' : ''}{f.discF.toFixed(1)}%
+          {/* All FIIs ranking with search */}
+          {(() => {
+            const rankedFiis = activeFiis
+              .map(f => {
+                const isP = f.segment === 'Recebíveis';
+                const vpaF = f.currentPrice / f.p_vp;
+                const kF = ntnbRate + (isP ? 2.0 : 3.5);
+                const gF = 3.5;
+                const tetoF = isP
+                  ? vpaF
+                  : (() => {
+                      const rd = (kF - gF) / 100;
+                      return rd <= 0 ? 0 : (f.lastDividend * 12) / rd;
+                    })();
+                const discF = tetoF > 0 ? ((tetoF - f.currentPrice) / tetoF) * 100 : 0;
+                return { ...f, tetoF, discF };
+              })
+              .sort((a, b) => b.discF - a.discF);
+
+            const filteredRanking = rankingSearch.trim()
+              ? rankedFiis.filter(f =>
+                  f.symbol.toLowerCase().includes(rankingSearch.toLowerCase()) ||
+                  f.name.toLowerCase().includes(rankingSearch.toLowerCase())
+                )
+              : rankedFiis;
+
+            return (
+              <div className="bg-[#020617]/70 border border-[#1e293b] rounded-xl overflow-hidden shadow-lg">
+                {/* Header + search */}
+                <div className="px-4 py-3 border-b border-[#1e293b] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-sans flex items-center gap-1.5">
+                      <Tag size={12} className="text-sky-400" /> Todos os FIIs Disponíveis ({filteredRanking.length})
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#0f172a] border border-[#1e293b] focus-within:border-sky-400/60 px-3 py-1.5 rounded-lg transition-all">
+                    <Search size={12} className="text-slate-500 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Buscar ticker..."
+                      value={rankingSearch}
+                      onChange={e => setRankingSearch(e.target.value)}
+                      className="bg-transparent border-none text-xs text-white outline-none font-mono w-full placeholder:text-slate-500"
+                    />
+                    {rankingSearch && (
+                      <button onClick={() => setRankingSearch('')} className="text-slate-500 hover:text-slate-300 text-[10px] cursor-pointer">✕</button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Column headers */}
+                <div className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-2 border-b border-[#1e293b] text-[9px] uppercase tracking-wide text-slate-500 font-sans">
+                  <span>FII</span>
+                  <span className="text-right w-20">Preço Atual</span>
+                  <span className="text-right w-20">Preço Teto</span>
+                  <span className="text-right w-28">Status</span>
+                </div>
+
+                <div className="divide-y divide-[#1e293b] max-h-[480px] overflow-y-auto">
+                  {filteredRanking.length === 0 ? (
+                    <p className="text-center text-xs text-slate-500 py-6 font-sans">Nenhum FII encontrado para "{rankingSearch}"</p>
+                  ) : filteredRanking.map(f => {
+                    const fc = segmentColors[f.segment] || { text: 'text-slate-400' };
+                    const isSelected = f.symbol === selectedSymbol;
+                    return (
+                      <button
+                        key={f.symbol}
+                        onClick={() => handleSelect(f.symbol)}
+                        className={`w-full grid grid-cols-[1fr_auto_auto_auto] items-center px-4 py-2.5 text-left hover:bg-[#1e293b]/40 transition-colors ${isSelected ? 'bg-sky-500/5 border-l-2 border-sky-400' : ''}`}
+                      >
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className={`text-[11px] font-bold font-mono ${fc.text}`}>{f.symbol}</span>
+                          <span className="text-[9px] text-slate-500 font-sans truncate">{f.segment}</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-slate-300 text-right w-20">
+                          R$ {f.currentPrice.toFixed(2)}
                         </span>
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
+                        <span className={`text-[11px] font-mono font-semibold text-right w-20 ${f.discF >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          R$ {f.tetoF.toFixed(2)}
+                        </span>
+                        <span className={`text-[9px] font-mono font-bold text-right w-28 ${f.discF >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {f.discF >= 0
+                            ? `${f.discF.toFixed(2)}% abaixo`
+                            : `${Math.abs(f.discF).toFixed(2)}% acima`
+                          }
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
         </div>
       </div>
